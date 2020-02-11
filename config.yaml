@@ -1,0 +1,21 @@
+# Pandas dataframe containing the annotations by the neurologists
+'annot_file': 'frontiers_dataset.p'
+# Split dataset into train/test
+'n_splits_train_test': 2
+# How many splits to use for the cross-validations
+'n_crossval_splits': 3
+# What top-n to consider
+'top_n_feat': 10
+# Subsample the test set to get standard deviation of the final scores
+'subsample': True
+# Number of subsamples to use for determining the std of the final result
+'n_subsample_splits': 5
+# Use the point where precision == recall to determine the threshold
+# instead of using the TPR == FPR
+'prec_rec_workpoint': False
+# Skip the cross-validation step
+'skip_first_phase': False
+# Discard all visits that were annotated twice (for intra-rater scores)
+'discard_all_doubles': False
+# The feature id that was chosen (default is Approximate Entropy)
+'chosen_feature': 847
