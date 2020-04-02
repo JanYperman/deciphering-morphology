@@ -1,0 +1,9 @@
+median: 0.0660287973
+iqr: 0.0629248893
+min: 0.2302054740
+max: 1.0000000000
+
+m: 2
+r: 0.2
+# The number of samples to discard at start of measurement
+cutoff: 70
