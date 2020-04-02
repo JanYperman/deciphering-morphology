@@ -56,6 +56,7 @@ def normalize_apen(apen_val, nc):
     return apen_norm
 
 def normalized_approximate_entropy(x, nc):
+    assert len(x) == 1920, 'Wrong number of samples for the timeseries, consider resampling'
     # ts = scipy.stats.zscore(x[nc['cutoff']:])
     ts = x[nc['cutoff']:]
     apen = approximate_entropy(ts, nc['m'], nc['r'])

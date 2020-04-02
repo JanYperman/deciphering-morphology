@@ -40,3 +40,6 @@ The dataset [dataset.zip](../master/dataset.zip) contains the data required to r
 * __timeseries\_id:__ An identifier to link to the timeseries associated with this entry. E.g. if this is 123 then the timeseries may be found in _timeseries/123.txt_. The corresponding features would then be found in _features/123.txt_.
 
 The two folders _timeseries_ and _features_ contain the individual timeseries and features respectively. They may be coupled to the entries in __dataset.csv__ by means of the _timeseries\_id_ field. Note that this is done automatically when running [frontiers_code.py](../master/frontiers_code.py), which stores a pickled dataframe called _frontiers\_dataset.p_ in the root.
+
+### Calculate approximate entropy
+To calculate the approximate entropy for new timeseries, use the function `normalized_approximate_entropy` defined in `calculate_apen.py`. It will assume 1920 samples per timeseries.This function also applies the normalization with the same parameters as those used in the paper. The function is illustrated by recalculating the approximate entropy of the timeseries in the dataset.
