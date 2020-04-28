@@ -29,6 +29,9 @@ python frontiers_code.py --help
 python frontiers_code.py -chosen_feature 400
 # Run the pipeline, skipping the cross-validation step
 python frontiers_code.py --skip_first_phase
+
+# Reproduce the results for different filters (supplementary)
+python generate_supplementary.py
 ```
 ## Dataset
 The dataset [dataset.zip](../master/dataset.zip) contains the data required to reproduce the main results. The main file, __dataset.csv__ contains the following fields:
