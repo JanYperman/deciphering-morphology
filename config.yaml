@@ -19,3 +19,13 @@
 'discard_all_doubles': False
 # The feature id that was chosen (default is Approximate Entropy)
 'chosen_feature': 847
+# Include only measurements from specific machine, can be 'new' (filtered)
+# or 'old' (not filtered)
+'include_only': 'all'
+
+
+
+# The number of cross validation splits
+'n_splits': 1000
+# Apply 100Hz filter to timeseries before ApEn calculation
+'filter': False

@@ -33,7 +33,7 @@ from sklearn.metrics import (accuracy_score, average_precision_score,
                              cohen_kappa_score, confusion_matrix, f1_score,
                              precision_recall_curve, precision_score,
                              recall_score, roc_auc_score, roc_curve)
-from sklearn.model_selection import GroupKFold, ShuffleSplit
+from sklearn.model_selection import GroupKFold, ShuffleSplit, GroupShuffleSplit
 from sklearn.neighbors import KernelDensity
 from scipy.signal import find_peaks
 from scipy.stats import iqr
@@ -79,7 +79,7 @@ def create_dataframe():
     # Flatten list
     rows = sum(groups, [])
     dataset = pd.DataFrame(rows)
-    dataset = dataset[['name', 'visitid', 'anatomy_side', 'morph', 'clinic_id', 'timeseries_id', 'timeseries', 'features']]
+    dataset = dataset[['name', 'visitid', 'anatomy_side', 'morph', 'clinic_id', 'timeseries_id', 'timeseries', 'features', 'computer']]
 
     return dataset
 
@@ -114,8 +114,8 @@ def plot_distribution_with_samples(df_test, feat_vals, classes, neur_thresholds,
     agreement_count = np.sum(df_test[neur].values, axis=-1)
     agreement_mask = np.logical_or(agreement_count == 2, agreement_count == 3)
     neur_errors = df_test.iloc[agreement_mask, :].apen.values
-    abnormal = df.query('vote == 1').apen.values
-    normal = df.query('vote == 0').apen.values
+    abnormal = df_test.query('vote == 1').apen.values
+    normal = df_test.query('vote == 0').apen.values
 
     width = 0.05
     ax = fig.add_subplot(gs[1, :])
@@ -538,7 +538,7 @@ def generate_performance_table(test_df, neur, thresh, columns, metrics=None):
     table_dict = []
     # columns = ['model [5-vote] (std)',
     #            'model [3-vote] (std)', 'neurologists [3-vote] (std)']
-    for met, is_bin in zip(metrics, binary):
+    for met, is_bin, mname in zip(metrics, binary, metrics_names):
         results_dict_neur = leave_one_out_score(
             test_df, neur, met) if is_bin else np.nan
         results_dict_log = leave_one_out_score(
@@ -551,6 +551,8 @@ def generate_performance_table(test_df, neur, thresh, columns, metrics=None):
         average_score_log = np.average(list(results_dict_log.values()))
         std_score_log = np.std(list(results_dict_log.values()))
 
+        # if mname == 'AUC':
+        #     print(y_true, log_pred)
         score_5_vote = met(y_true, log_pred > thresh if is_bin else log_pred)
 
         table_dict.append({columns[2]: fmt_str % (average_score_neur, std_score_neur)
@@ -616,6 +618,14 @@ if __name__ == "__main__":
     else:
         df_labels = pd.read_pickle(args['annot_file'])
 
+    if args['include_only'] != 'all':
+        if args['include_only'] not in df_labels.computer.unique():
+            raise Exception('Invalid machine type: %s. Should be one of {new, old}' %
+                    args['include_only'])
+        df_labels = df_labels[df_labels.computer == args['include_only']]
+        # df_labels = df_labels[df_labels.computer == 'old']
+
+
     neur = sorted(df_labels.name.unique().tolist())
 
     # Determine the agreement between the neurologists
@@ -650,6 +660,7 @@ if __name__ == "__main__":
                  .filter(lambda x: (x['morph'] != 3).all()))
     print('# Removed due to bad data: %i / %i' %
             (((with_bad_data_count - len(df_labels)) / len(neur)), with_bad_data_count / len(neur)))
+    print(df_labels.groupby(['clinic_id', 'visitid']).size().value_counts())
 
     # Generate agreement tables
     df_agree = get_agreement(
@@ -675,6 +686,9 @@ if __name__ == "__main__":
                  )
     df_ts_features = df_labels.groupby(['visitid', 'anatomy_side']).nth(0)
     df_labels = pd.merge(df_tmp, df_ts_features, how='inner', on=['visitid', 'anatomy_side'])
+
+    df_labels.to_pickle('single_record_per_ts.p')
+    print(df_labels.computer.value_counts())
     
     # Set labels values from 1 and 2 to 0 and 1
     # Originally, 1 is normal, 2 is abnormal and 3 is bad data
@@ -684,6 +698,23 @@ if __name__ == "__main__":
     # Vote - Create new column with the majority vote
     df_labels['vote'] = (np.average(
         df_labels[neur].values, axis=-1) > 0.5).astype(np.int8)
+
+    if args['include_only'] == 'all':
+        df_labels['apen'] = df_labels.features.apply(lambda k: k[args['chosen_feature']])
+        fig, ax = plt.subplots(1, 2, figsize=(8, 6), sharey=True)
+        titles = ['filtered', 'not filtered']
+        for i, comp in enumerate(['new', 'old']):
+            abnormal = df_labels[(df_labels.vote == 1) & (df_labels.computer == comp)].apen.values
+            normal = df_labels[(df_labels.vote == 0) & (df_labels.computer == comp)].apen.values
+            ax[i].scatter(range(len(abnormal)), abnormal, color='g', marker='P')
+            ax[i].scatter(range(len(abnormal), len(abnormal) + len(normal)), normal, color='r', marker='o')
+            # Horizontal line to indicate threshold chosen in manuscript
+            ax[i].axhline(0.545, ls='--', color='darkgrey')
+            ax[i].set_xlabel('sample id')
+            ax[i].set_ylabel('Approximate entropy')
+            ax[i].set_title(titles[i])
+        plt.tight_layout()
+        plt.savefig('distributions_normal_abnormal.pdf', bbox_inches='tight')
 
     # Print the class imbalance
     n_normal = len(df_labels.query('vote == 0'))
@@ -696,6 +727,7 @@ if __name__ == "__main__":
                                         frac_normal,
                                         frac_abnormal
                                         ))
+    # print(df_labels.groupby(['vote', 'computer']).size())
 
     df = df_labels
 
@@ -716,6 +748,7 @@ if __name__ == "__main__":
     '''
     # Create train and test set
     gkf = GroupKFold(n_splits=args['n_splits_train_test'])
+    # gkf = GroupShuffleSplit(n_splits=args['n_splits_train_test'], random_state=1234)
     
     # Adds a column with peak count (normalized)
     df = find_peaks_ts(df)
@@ -728,6 +761,7 @@ if __name__ == "__main__":
 
     # Ensure the same patient does not occur in both train and test set
     train_index, test_index = list(gkf.split(df.index, groups=df.clinic_id.values))[0]
+    print(len(train_index), len(test_index))
 
     X_train = X[train_index, :]
     y_train = y[train_index, :]
@@ -867,10 +901,16 @@ if __name__ == "__main__":
         # Find precision-recall working point, i.e., the point where precision is approximately
         # the same as the recall
         prec, rec, thresholds = precision_recall_curve(y_train_vote, y_train_pred)
+        plt.plot(prec, rec)
+        plt.scatter(prec[np.argmin(np.abs(prec - rec))], rec[np.argmin(np.abs(prec - rec))])
+        plt.show()
         thresh = thresholds[np.argmin(np.abs(prec - rec))]
     else:
         # Find ROC working point, i.e., the point where tpr is approximately the same as the 1 - fpr
         fpr, tpr, thresholds = roc_curve(y_train_vote, y_train_pred)
+        plt.plot(fpr, tpr)
+        plt.scatter(fpr[np.argmax(np.abs(tpr - fpr))], tpr[np.argmax(np.abs(tpr - fpr))])
+        plt.show()
         thresh = thresholds[np.argmax(tpr - fpr)]
 
     print('Chosen threshold: %.3f' % thresh)
@@ -922,6 +962,7 @@ if __name__ == "__main__":
         votes_5_results.append(pt[label_5vote].values)
 
     test_df = df.loc[df.index[test_index]].copy()
+    print('# samples in test set: %i' % len(test_df))
     X_test = X[test_index, :]
     y_pred = clf.predict_proba(X_test[:, FEAT].reshape((-1, 1)))[:, 1]
 
@@ -931,6 +972,7 @@ if __name__ == "__main__":
     feat_vals = [0.2, 0.5, 0.9]
     classes = [0, 1, 1]
     plot_distribution_with_samples(test_df, feat_vals, classes, indiv_thresh, df, FEAT)
+
 
     test_df['logreg_prob'] = y_pred
     test_df['logreg'] = y_pred > thresh

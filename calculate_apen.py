@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import tqdm
 import yaml
-import functools
 import multiprocessing
 import os
 import frontiers_code as fc
@@ -55,11 +54,15 @@ def normalize_apen(apen_val, nc):
     apen_norm = (apen_norm - nc['min']) / (nc['max'] - nc['min'])
     return apen_norm
 
-def normalized_approximate_entropy(x, nc):
+def normalized_approximate_entropy(x, m=None, r=None):
+    nc = yaml.load(open('./normalization_constants.yaml', 'r'), Loader=yaml.FullLoader)
     assert len(x) == 1920, 'Wrong number of samples for the timeseries, consider resampling'
     # ts = scipy.stats.zscore(x[nc['cutoff']:])
     ts = x[nc['cutoff']:]
-    apen = approximate_entropy(ts, nc['m'], nc['r'])
+    if (m is None) and (r is None):
+        apen = approximate_entropy(ts, nc['m'], nc['r'])
+    else:
+        apen = approximate_entropy(ts, m, r)
     norm_apen = normalize_apen(apen, nc)
     return norm_apen
 
@@ -81,8 +84,7 @@ def main():
     df = df.groupby('timeseries_id').nth(0)
 
     p = multiprocessing.Pool()
-    f = functools.partial(normalized_approximate_entropy, nc=nc)
-    results = list(tqdm.tqdm(p.imap(f, df.timeseries.values, chunksize=1), total=len(df)))
+    results = list(tqdm.tqdm(p.imap(normalized_approximate_entropy, df.timeseries.values, chunksize=1), total=len(df)))
     p.close()
 
     df['apen'] = results
