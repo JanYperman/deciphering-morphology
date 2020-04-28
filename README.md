@@ -41,6 +41,7 @@ The dataset [dataset.zip](../master/dataset.zip) contains the data required to r
 * __morph:__ The label assigned by the neurologist (1=normal, 2=abnormal, 3=bad data)
 * __clinic\_id__: Unique identifier for a patient, which is used to ensure no patients end up in both the train and the test set.
 * __timeseries\_id:__ An identifier to link to the timeseries associated with this entry. E.g. if this is 123 then the timeseries may be found in _timeseries/123.txt_. The corresponding features would then be found in _features/123.txt_.
+* __computer:__ This field indicates the machine on which the measurement was performed. There are two machines, one labeled 'new', the other is labeled 'old'.
 
 The two folders _timeseries_ and _features_ contain the individual timeseries and features respectively. They may be coupled to the entries in __dataset.csv__ by means of the _timeseries\_id_ field. Note that this is done automatically when running [frontiers_code.py](../master/frontiers_code.py), which stores a pickled dataframe called _frontiers\_dataset.p_ in the root.
 
