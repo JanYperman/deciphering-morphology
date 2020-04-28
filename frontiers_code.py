@@ -623,7 +623,6 @@ if __name__ == "__main__":
             raise Exception('Invalid machine type: %s. Should be one of {new, old}' %
                     args['include_only'])
         df_labels = df_labels[df_labels.computer == args['include_only']]
-        # df_labels = df_labels[df_labels.computer == 'old']
 
 
     neur = sorted(df_labels.name.unique().tolist())
@@ -660,7 +659,6 @@ if __name__ == "__main__":
                  .filter(lambda x: (x['morph'] != 3).all()))
     print('# Removed due to bad data: %i / %i' %
             (((with_bad_data_count - len(df_labels)) / len(neur)), with_bad_data_count / len(neur)))
-    print(df_labels.groupby(['clinic_id', 'visitid']).size().value_counts())
 
     # Generate agreement tables
     df_agree = get_agreement(
@@ -699,22 +697,23 @@ if __name__ == "__main__":
     df_labels['vote'] = (np.average(
         df_labels[neur].values, axis=-1) > 0.5).astype(np.int8)
 
-    if args['include_only'] == 'all':
-        df_labels['apen'] = df_labels.features.apply(lambda k: k[args['chosen_feature']])
-        fig, ax = plt.subplots(1, 2, figsize=(8, 6), sharey=True)
-        titles = ['filtered', 'not filtered']
-        for i, comp in enumerate(['new', 'old']):
-            abnormal = df_labels[(df_labels.vote == 1) & (df_labels.computer == comp)].apen.values
-            normal = df_labels[(df_labels.vote == 0) & (df_labels.computer == comp)].apen.values
-            ax[i].scatter(range(len(abnormal)), abnormal, color='g', marker='P')
-            ax[i].scatter(range(len(abnormal), len(abnormal) + len(normal)), normal, color='r', marker='o')
-            # Horizontal line to indicate threshold chosen in manuscript
-            ax[i].axhline(0.545, ls='--', color='darkgrey')
-            ax[i].set_xlabel('sample id')
-            ax[i].set_ylabel('Approximate entropy')
-            ax[i].set_title(titles[i])
-        plt.tight_layout()
-        plt.savefig('distributions_normal_abnormal.pdf', bbox_inches='tight')
+    ## Uncomment to generate the scatter plot in the supplementary
+    ## if args['include_only'] == 'all':
+    ##     df_labels['apen'] = df_labels.features.apply(lambda k: k[args['chosen_feature']])
+    ##     fig, ax = plt.subplots(1, 2, figsize=(8, 6), sharey=True)
+    ##     titles = ['filtered', 'not filtered']
+    ##     for i, comp in enumerate(['new', 'old']):
+    ##         abnormal = df_labels[(df_labels.vote == 1) & (df_labels.computer == comp)].apen.values
+    ##         normal = df_labels[(df_labels.vote == 0) & (df_labels.computer == comp)].apen.values
+    ##         ax[i].scatter(range(len(abnormal)), abnormal, color='g', marker='P')
+    ##         ax[i].scatter(range(len(abnormal), len(abnormal) + len(normal)), normal, color='r', marker='o')
+    ##         # Horizontal line to indicate threshold chosen in manuscript
+    ##         ax[i].axhline(0.545, ls='--', color='darkgrey')
+    ##         ax[i].set_xlabel('sample id')
+    ##         ax[i].set_ylabel('Approximate entropy')
+    ##         ax[i].set_title(titles[i])
+    ##     plt.tight_layout()
+    ##     plt.savefig('distributions_normal_abnormal.pdf', bbox_inches='tight')
 
     # Print the class imbalance
     n_normal = len(df_labels.query('vote == 0'))
@@ -761,7 +760,6 @@ if __name__ == "__main__":
 
     # Ensure the same patient does not occur in both train and test set
     train_index, test_index = list(gkf.split(df.index, groups=df.clinic_id.values))[0]
-    print(len(train_index), len(test_index))
 
     X_train = X[train_index, :]
     y_train = y[train_index, :]
@@ -901,9 +899,9 @@ if __name__ == "__main__":
         # Find precision-recall working point, i.e., the point where precision is approximately
         # the same as the recall
         prec, rec, thresholds = precision_recall_curve(y_train_vote, y_train_pred)
-        plt.plot(prec, rec)
-        plt.scatter(prec[np.argmin(np.abs(prec - rec))], rec[np.argmin(np.abs(prec - rec))])
-        plt.show()
+        ## plt.plot(prec, rec)
+        ## plt.scatter(prec[np.argmin(np.abs(prec - rec))], rec[np.argmin(np.abs(prec - rec))])
+        ## plt.show()
         thresh = thresholds[np.argmin(np.abs(prec - rec))]
     else:
         # Find ROC working point, i.e., the point where tpr is approximately the same as the 1 - fpr
