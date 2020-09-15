@@ -244,8 +244,8 @@ def plot_two_curves(df, neur, thresh):
         y_pred=df['logreg_prob'].values,
         thresh=thresh,
         flip=False,
-        xlabel='precision',
-        ylabel='recall',
+        xlabel='recall',
+        ylabel='precision',
         legend_loc=3,
         ax=axs[1]
     )
